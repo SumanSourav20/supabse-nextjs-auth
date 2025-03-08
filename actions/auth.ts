@@ -6,6 +6,17 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 
+export async function getUserSession() {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser()
+    // const { data, error } = await supabase.auth.getSession();
+    if(error){
+        return null;
+    }
+    return {status: "success", user: data?.user};
+    // return {status: "success", user: data?.session?.user};
+}
+
 export async function signUp(formData: FormData) {
     const supabase = await createClient();
 
@@ -21,7 +32,9 @@ export async function signUp(formData: FormData) {
         password: credentials.password,
         options: {
             data:{
-                username: credentials.email
+                email: credentials.email,
+                username: credentials.username
+
             },
         },
     });
@@ -96,3 +109,21 @@ export async function signOut(){
     revalidatePath("/", "layout")
     redirect("/login")
 }
+
+
+export async function signInWithGithub() {
+    const origin = (await headers()).get("origin");
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${origin}/auth/callback`,
+      },
+    })
+    if(error){
+        redirect("/error")
+    }else if (data.url){
+        return redirect(data.url)
+    }
+  }
+  
